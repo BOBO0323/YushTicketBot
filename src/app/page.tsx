@@ -25,6 +25,8 @@ export default function AdminDashboard() {
   const [panelColor, setPanelColor] = useState('#5865F2');
   const [panelImage, setPanelImage] = useState('');
   const [panelThumb, setPanelThumb] = useState('');
+  const [panelLogChannel, setPanelLogChannel] = useState('');
+  const [panelAutoClose, setPanelAutoClose] = useState('24');
   const [panelSaving, setPanelSaving] = useState(false);
 
   // Form State
@@ -56,6 +58,8 @@ export default function AdminDashboard() {
         setPanelColor(data.panel.color);
         setPanelImage(data.panel.imageUrl || '');
         setPanelThumb(data.panel.thumbnailUrl || '');
+        setPanelLogChannel(data.panel.logChannelId || '');
+        setPanelAutoClose(data.panel.autoCloseHours?.toString() || '24');
       }
     } catch (error) {
       console.error(error);
@@ -83,7 +87,8 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: panelTitle, description: panelDesc, color: panelColor,
-          imageUrl: panelImage, thumbnailUrl: panelThumb
+          imageUrl: panelImage, thumbnailUrl: panelThumb,
+          logChannelId: panelLogChannel, autoCloseHours: parseInt(panelAutoClose) || 24
         })
       });
       alert('✅ 面板設定已儲存！請至 Discord 重新輸入 /setup_ticket 以套用。');
@@ -182,6 +187,16 @@ export default function AdminDashboard() {
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">面板描述 (支援 Discord Markdown)</label>
                 <textarea required rows={4} value={panelDesc} onChange={e => setPanelDesc(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">紀錄頻道 ID</label>
+                  <input value={panelLogChannel} onChange={e => setPanelLogChannel(e.target.value)} placeholder="留空則不備份" className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">超時關單 (小時)</label>
+                  <input type="number" value={panelAutoClose} onChange={e => setPanelAutoClose(e.target.value)} min="1" className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition" />
+                </div>
               </div>
             </div>
             <div className="space-y-4">

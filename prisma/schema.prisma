@@ -141,11 +141,22 @@ model TicketCategory {
 }
 
 model TicketPanel {
-  id           Int      @id @default(1)
-  title        String   @default("📩 聯繫客服")
-  description  String   @default("如果您有任何問題，請選擇下方對應的服務類別，我們將為您開啟專屬的客服通道。")
-  color        String   @default("#5865F2")
-  imageUrl     String?
-  thumbnailUrl String?
-  updatedAt    DateTime @updatedAt
+  id             Int      @id @default(1)
+  title          String   @default("📩 聯繫客服")
+  description    String   @default("如果您有任何問題，請選擇下方對應的服務類別，我們將為您開啟專屬的客服通道。")
+  color          String   @default("#5865F2")
+  imageUrl       String?
+  thumbnailUrl   String?
+  logChannelId   String?  // The channel ID to send transcripts to
+  autoCloseHours Int      @default(24) // Hours of inactivity before auto-closing
+  updatedAt      DateTime @updatedAt
+}
+
+model Ticket {
+  id            String   @id @default(cuid())
+  channelId     String   @unique
+  ownerId       String
+  status        String   @default("OPEN") // OPEN, CLOSED
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
 }

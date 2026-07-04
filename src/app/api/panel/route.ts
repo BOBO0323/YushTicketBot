@@ -19,12 +19,12 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    const { title, description, color, imageUrl, thumbnailUrl } = data;
+    const { title, description, color, imageUrl, thumbnailUrl, logChannelId, autoCloseHours } = data;
 
     const updatedPanel = await prisma.ticketPanel.upsert({
       where: { id: 1 },
-      update: { title, description, color, imageUrl, thumbnailUrl },
-      create: { id: 1, title, description, color, imageUrl, thumbnailUrl }
+      update: { title, description, color, imageUrl, thumbnailUrl, logChannelId, autoCloseHours: parseInt(autoCloseHours) || 24 },
+      create: { id: 1, title, description, color, imageUrl, thumbnailUrl, logChannelId, autoCloseHours: parseInt(autoCloseHours) || 24 }
     });
 
     return NextResponse.json({ success: true, panel: updatedPanel });

@@ -12,6 +12,35 @@ import { addTicketCategoryCommand, removeTicketCategoryCommand } from './command
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+async function packAndCloseTicket(channel: TextChannel, closedBy: string, reason: string) {
+  try {
+    const panel = await prisma.ticketPanel.findUnique({ where: { id: 1 } });
+    if (panel?.logChannelId) {
+      const logChannel = await channel.client.channels.fetch(panel.logChannelId).catch(()=>null);
+      if (logChannel && logChannel.isTextBased()) {
+        const attachment = await discordTranscripts.createTranscript(channel, {
+          limit: -1, returnType: discordTranscripts.ExportReturnType.Attachment,
+          filename: `${channel.name}-transcript.html`, saveImages: true, poweredBy: false
+        });
+        const embed = new EmbedBuilder()
+          .setTitle('📑 客服單對話紀錄 (Ticket Log)')
+          .setColor(0x2B2D31)
+          .addFields(
+            { name: '頻道名稱', value: channel.name, inline: true },
+            { name: '關閉者', value: closedBy, inline: true },
+            { name: '原因', value: reason, inline: true }
+          )
+          .setTimestamp();
+        await (logChannel as TextChannel).send({ embeds: [embed], files: [attachment] });
+      }
+    }
+  } catch (error) { console.error('Pack error:', error); }
+  
+  await prisma.ticket.deleteMany({ where: { channelId: channel.id } });
+  await channel.delete(reason).catch(()=>null);
+}
+
 const token = process.env.DISCORD_BOT_TOKEN;
 const clientId = process.env.DISCORD_CLIENT_ID;
 
@@ -44,6 +73,38 @@ client.once('ready', async () => {
       console.error('Error refreshing commands:', error);
     }
   }
+
+  // Auto-close cron job (runs every 10 minutes)
+  setInterval(async () => {
+    try {
+      const panel = await prisma.ticketPanel.findUnique({ where: { id: 1 } });
+      const autoCloseHours = panel?.autoCloseHours || 24;
+      const cutoffDate = new Date(Date.now() - autoCloseHours * 60 * 60 * 1000);
+
+      const expiredTickets = await prisma.ticket.findMany({
+        where: { status: 'OPEN', lastMessageAt: { lt: cutoffDate } }
+      });
+
+      for (const t of expiredTickets) {
+        const channel = await client.channels.fetch(t.channelId).catch(()=>null);
+        if (channel && channel.isTextBased()) {
+          await packAndCloseTicket(channel as TextChannel, '系統 (System)', `超過 ${autoCloseHours} 小時未回覆自動關閉`);
+        } else {
+          await prisma.ticket.deleteMany({ where: { id: t.id } });
+        }
+      }
+    } catch (error) { console.error('Cron job error:', error); }
+  }, 10 * 60 * 1000);
+});
+
+client.on('messageCreate', async message => {
+  if (message.author.bot) return;
+  try {
+    const ticket = await prisma.ticket.findUnique({ where: { channelId: message.channel.id } });
+    if (ticket && ticket.status === 'OPEN') {
+      await prisma.ticket.update({ where: { channelId: message.channel.id }, data: { lastMessageAt: new Date() } });
+    }
+  } catch (e) {}
 });
 
 client.on('interactionCreate', async interaction => {
@@ -148,6 +209,7 @@ client.on('interactionCreate', async interaction => {
           if (category.thumbnailUrl) embed.setThumbnail(category.thumbnailUrl);
 
           await (newChannel as TextChannel).send({ content: pingText, embeds: [embed], components: [row] });
+          await prisma.ticket.create({ data: { channelId: newChannel.id, ownerId: interaction.user.id } });
           await interaction.editReply(`✅ 您的客服單已建立：<#${newChannel.id}>`);
         } catch (error) {
           console.error(error);
@@ -250,8 +312,8 @@ client.on('interactionCreate', async interaction => {
     else if (interaction.customId === 'delete_ticket') {
       const channel = interaction.channel as TextChannel;
       if (!channel) return;
-      await interaction.reply('🗑️ 頻道將在 3 秒後被徹底刪除...');
-      setTimeout(() => channel.delete('Admin deleted the ticket'), 3000);
+      await interaction.reply('🗑️ 頻道即將打包並徹底刪除...');
+      await packAndCloseTicket(channel, `<@${interaction.user.id}>`, '管理員手動刪除');
     }
   }
 });

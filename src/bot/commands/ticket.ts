@@ -20,7 +20,7 @@ export const setupTicketCommand = {
       // 取得全域面板設定
       let panel = await prisma.ticketPanel.findUnique({ where: { id: 1 } });
       if (!panel) {
-        panel = { id: 1, title: '📩 聯繫客服', description: '如果您有任何問題，請選擇下方對應的服務類別，我們將為您開啟專屬的客服通道。', color: '#5865F2', imageUrl: null, thumbnailUrl: null, updatedAt: new Date() };
+        panel = { id: 1, title: '📩 聯繫客服', description: '如果您有任何問題，請選擇下方對應的服務類別，我們將為您開啟專屬的客服通道。', color: '#5865F2', imageUrl: null, thumbnailUrl: null, logChannelId: null, autoCloseHours: 24, updatedAt: new Date() };
       }
 
       const embed = new EmbedBuilder()
