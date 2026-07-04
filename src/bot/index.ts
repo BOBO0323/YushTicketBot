@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import http from 'http';
 import { 
   Client, GatewayIntentBits, REST, Routes, 
   ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
@@ -256,3 +257,13 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.login(token);
+
+// --- 建立微型 HTTP 伺服器防休眠 (Render 專用) ---
+const PORT = process.env.PORT || 8080;
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Bot is perfectly alive and ready!');
+});
+server.listen(PORT, () => {
+  console.log(`Keep-alive server is listening on port ${PORT}`);
+});
