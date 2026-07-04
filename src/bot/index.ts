@@ -15,28 +15,31 @@ const prisma = new PrismaClient();
 
 async function packAndCloseTicket(channel: TextChannel, closedBy: string, reason: string) {
   try {
+    const ticket = await prisma.ticket.findUnique({ where: { channelId: channel.id } });
+    const ownerId = ticket?.ownerId || channel.name.split('-').pop(); // Fallback to channel name if DB record is missing
+
     const panel = await prisma.ticketPanel.findUnique({ where: { id: 1 } });
+    const attachment = await discordTranscripts.createTranscript(channel, {
+      limit: -1, returnType: discordTranscripts.ExportReturnType.Attachment,
+      filename: `${channel.name}-transcript.html`, saveImages: true, poweredBy: false
+    });
+
+    const embed = new EmbedBuilder()
+      .setTitle('📑 客服單對話紀錄 (Ticket Log)')
+      .setColor(0x2B2D31)
+      .addFields(
+        { name: '頻道名稱', value: channel.name, inline: true },
+        { name: '關閉者', value: closedBy, inline: true },
+        { name: '原因', value: reason, inline: true }
+      )
+      .setTimestamp();
+
+    // 1. 發送到 Log Channel
     if (panel?.logChannelId) {
       const logChannel = await channel.client.channels.fetch(panel.logChannelId).catch(()=>null);
       if (logChannel && logChannel.isTextBased()) {
-        const attachment = await discordTranscripts.createTranscript(channel, {
-          limit: -1, returnType: discordTranscripts.ExportReturnType.Attachment,
-          filename: `${channel.name}-transcript.html`, saveImages: true, poweredBy: false
-        });
-        const embed = new EmbedBuilder()
-          .setTitle('📑 客服單對話紀錄 (Ticket Log)')
-          .setColor(0x2B2D31)
-          .addFields(
-            { name: '頻道名稱', value: channel.name, inline: true },
-            { name: '關閉者', value: closedBy, inline: true },
-            { name: '原因', value: reason, inline: true }
-          )
-          .setTimestamp();
-        
-        // 發送訊息並取得附檔網址
         const msg = await (logChannel as TextChannel).send({ embeds: [embed], files: [attachment] });
         const fileUrl = msg.attachments.first()?.url;
-        
         if (fileUrl) {
           const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
@@ -48,6 +51,19 @@ async function packAndCloseTicket(channel: TextChannel, closedBy: string, reason
         }
       }
     }
+
+    // 2. 私訊給開單的使用者
+    if (ownerId) {
+      const user = await channel.client.users.fetch(ownerId).catch(()=>null);
+      if (user) {
+        const dmEmbed = new EmbedBuilder()
+          .setTitle('📑 您的客服單已關閉')
+          .setDescription('感謝您的聯繫！這是您本次客服單的完整對話紀錄備份，請下載附檔後使用電腦瀏覽器開啟。')
+          .setColor(0x5865F2);
+        await user.send({ embeds: [dmEmbed], files: [attachment] }).catch(()=>null);
+      }
+    }
+
   } catch (error) { console.error('Pack error:', error); }
   
   await prisma.ticket.deleteMany({ where: { channelId: channel.id } });
