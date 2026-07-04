@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  role            String   @default("CUSTOMER")
+  membershipLevel String   @default("BRONZE")
+  totalSpent      Float    @default(0)
+  balance         Float    @default(0)
+  orders          Order[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Category {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  subCategories SubCategory[]
+}
+
+model SubCategory {
+  id         String    @id @default(cuid())
+  name       String
+  imageUrl   String?
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products   Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  guideLink   String?
+  imageUrl      String?
+  subCategoryId String?
+  cheatStatus   String   @default("SAFE") // SAFE, UPDATING, RISKY
+  isDeleted     Boolean  @default(false)
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  
+  variants    ProductVariant[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  name      String   // e.g. "天卡", "周卡", "月卡"
+  price     Float
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  inventory CardInventory[]
+  orders    Order[]
+}
+
+model CardInventory {
+  id        String         @id @default(cuid())
+  code      String
+  status    String         @default("AVAILABLE") // AVAILABLE, SOLD
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  orderId   String?        @unique
+  order     Order?         @relation(fields: [orderId], references: [id])
+  
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([variantId, orderId])
+  @@index([variantId, status])
+}
+
+model Order {
+  id              String         @id @default(cuid())
+  status          String         @default("PENDING") // PENDING, COMPLETED, FAILED
+  totalAmount     Float
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  cardInventory   CardInventory?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+model DiscountSettings {
+  id               String   @id @default("global")
+  silverDiscount   Float    @default(0.95)
+  goldDiscount     Float    @default(0.90)
+  platinumDiscount Float    @default(0.85)
+  agentDiscount    Float    @default(0.60)
+  
+  bulkQty1         Int      @default(5)
+  bulkDiscount1    Float    @default(0.95)
+  bulkQty2         Int      @default(10)
+  bulkDiscount2    Float    @default(0.90)
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  type      String   @default("INFO") // INFO, WARNING, SUCCESS
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TicketCategory {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  label          String
+  emoji          String
+  channelPrefix  String
+  welcomeMessage String
+  supportRoleId  String?  // VIP: Role ID to ping
+  embedColor     String?  // VIP: Hex color code
+  imageUrl       String?  // VIP: Embed image
+  thumbnailUrl   String?  // VIP: Embed thumbnail
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
