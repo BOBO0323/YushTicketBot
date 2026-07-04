@@ -30,9 +30,41 @@ export async function POST(request: Request) {
         thumbnailUrl: data.thumbnailUrl || null,
       }
     });
-    return NextResponse.json(newCategory);
+    return NextResponse.json({ success: true, category: newCategory });
   } catch (error) {
+    console.error('Error creating category:', error);
     return NextResponse.json({ error: 'Failed to create category' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const data = await request.json();
+    const { id, code, label, emoji, channelPrefix, welcomeMessage, supportRoleId, embedColor, imageUrl, thumbnailUrl } = data;
+
+    if (!id || !code || !label) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const updatedCategory = await prisma.ticketCategory.update({
+      where: { id },
+      data: {
+        code,
+        label,
+        emoji,
+        channelPrefix,
+        welcomeMessage,
+        supportRoleId,
+        embedColor,
+        imageUrl,
+        thumbnailUrl
+      }
+    });
+
+    return NextResponse.json({ success: true, category: updatedCategory });
+  } catch (error) {
+    console.error('Error updating category:', error);
+    return NextResponse.json({ error: 'Failed to update category' }, { status: 500 });
   }
 }
 

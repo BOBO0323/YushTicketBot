@@ -110,56 +110,56 @@ client.on('interactionCreate', async interaction => {
         }
         await interaction.editReply({ content: res, components: [] });
       } catch(e) {}
+    } else if (interaction.customId === 'ticket_select') {
+      const selectedValue = interaction.values[0];
+      if (selectedValue.startsWith('create_ticket_')) {
+        const catCode = selectedValue.replace('create_ticket_', '');
+        const category = await prisma.ticketCategory.findUnique({ where: { code: catCode } });
+        if (!category || !interaction.guild) return;
+
+        await interaction.deferReply({ flags: ['Ephemeral'] });
+
+        try {
+          const newChannel = await interaction.guild.channels.create({
+            name: `${category.channelPrefix}-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [
+              { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+              { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+              { id: client.user!.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+            ],
+          });
+
+          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId(`close_ticket_${interaction.user.id}`).setLabel('🔒 關閉').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('claim_ticket').setLabel('🙋‍♂️ 認領').setStyle(ButtonStyle.Success)
+          );
+
+          let pingText = `<@${interaction.user.id}>`;
+          if (category.supportRoleId) pingText += ` <@&${category.supportRoleId}>`;
+
+          const embed = new EmbedBuilder()
+            .setTitle(`${category.emoji} ${category.label}`)
+            .setDescription(category.welcomeMessage)
+            .setColor(category.embedColor ? parseInt(category.embedColor.replace('#', ''), 16) : 0x5865F2);
+          
+          if (category.imageUrl) embed.setImage(category.imageUrl);
+          if (category.thumbnailUrl) embed.setThumbnail(category.thumbnailUrl);
+
+          await (newChannel as TextChannel).send({ content: pingText, embeds: [embed], components: [row] });
+          await interaction.editReply(`✅ 您的客服單已建立：<#${newChannel.id}>`);
+        } catch (error) {
+          console.error(error);
+          await interaction.editReply('❌ 建立客服單失敗。');
+        }
+      }
     }
   }
 
   // --- 處理按鈕互動 (VIP 客服單生命週期) ---
   else if (interaction.isButton()) {
-    // 1. 開啟客服單
-    if (interaction.customId.startsWith('create_ticket_')) {
-      const catCode = interaction.customId.replace('create_ticket_', '');
-      const category = await prisma.ticketCategory.findUnique({ where: { code: catCode } });
-      if (!category || !interaction.guild) return;
-
-      await interaction.deferReply({ flags: ['Ephemeral'] });
-
-      try {
-        const newChannel = await interaction.guild.channels.create({
-          name: `${category.channelPrefix}-${interaction.user.username}`,
-          type: ChannelType.GuildText,
-          permissionOverwrites: [
-            { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-            { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-            { id: client.user!.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
-          ],
-        });
-
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder().setCustomId(`close_ticket_${interaction.user.id}`).setLabel('🔒 關閉').setStyle(ButtonStyle.Danger),
-          new ButtonBuilder().setCustomId('claim_ticket').setLabel('🙋‍♂️ 認領').setStyle(ButtonStyle.Success)
-        );
-
-        let pingText = `<@${interaction.user.id}>`;
-        if (category.supportRoleId) pingText += ` <@&${category.supportRoleId}>`;
-
-        const embed = new EmbedBuilder()
-          .setTitle(`${category.emoji} ${category.label}`)
-          .setDescription(category.welcomeMessage)
-          .setColor(category.embedColor ? parseInt(category.embedColor.replace('#', ''), 16) : 0x5865F2);
-        
-        if (category.imageUrl) embed.setImage(category.imageUrl);
-        if (category.thumbnailUrl) embed.setThumbnail(category.thumbnailUrl);
-
-        await (newChannel as TextChannel).send({ content: pingText, embeds: [embed], components: [row] });
-        await interaction.editReply(`✅ 您的客服單已建立：<#${newChannel.id}>`);
-      } catch (error) {
-        console.error(error);
-        await interaction.editReply('❌ 建立客服單失敗。');
-      }
-    }
-    
     // 2. 認領客服單
-    else if (interaction.customId === 'claim_ticket') {
+    if (interaction.customId === 'claim_ticket') {
       const channel = interaction.channel as TextChannel;
       if (!channel) return;
       await interaction.reply({ content: `✅ 本客服單已由 <@${interaction.user.id}> 認領處理！` });

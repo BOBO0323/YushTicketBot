@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Form State
+  const [editId, setEditId] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [label, setLabel] = useState('');
   const [emoji, setEmoji] = useState('🎫');
@@ -48,24 +49,48 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await fetch('/api/tickets', {
-        method: 'POST',
+      const url = '/api/tickets';
+      const method = editId ? 'PUT' : 'POST';
+      const body = {
+        id: editId, code, label, emoji, channelPrefix, welcomeMessage, 
+        supportRoleId, embedColor, imageUrl, thumbnailUrl
+      };
+
+      await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code, label, emoji, channelPrefix, welcomeMessage, 
-          supportRoleId, embedColor, imageUrl, thumbnailUrl
-        }),
+        body: JSON.stringify(body),
       });
       fetchCategories();
-      // Reset basic form
-      setCode(''); setLabel(''); setChannelPrefix('');
+      resetForm();
     } catch (error) {
       console.error(error);
-      alert('新增失敗');
+      alert(editId ? '更新失敗' : '新增失敗');
     }
+  };
+
+  const resetForm = () => {
+    setEditId(null);
+    setCode(''); setLabel(''); setChannelPrefix(''); setEmoji('🎫');
+    setWelcomeMessage('您好，請問有什麼能幫您？');
+    setSupportRoleId(''); setEmbedColor('#5865F2'); setImageUrl(''); setThumbnailUrl('');
+  };
+
+  const handleEdit = (cat: TicketCategory) => {
+    setEditId(cat.id);
+    setCode(cat.code);
+    setLabel(cat.label);
+    setEmoji(cat.emoji);
+    setChannelPrefix(cat.channelPrefix);
+    setWelcomeMessage(cat.welcomeMessage);
+    setSupportRoleId(cat.supportRoleId || '');
+    setEmbedColor(cat.embedColor || '#5865F2');
+    setImageUrl(cat.imageUrl || '');
+    setThumbnailUrl(cat.thumbnailUrl || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: string) => {
@@ -102,9 +127,9 @@ export default function AdminDashboard() {
           {/* Create Form */}
           <div className="lg:col-span-1 bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <span className="text-blue-400">✨</span> 新增客服類別
+              <span className="text-blue-400">✨</span> {editId ? '編輯客服類別' : '新增客服類別'}
             </h2>
-            <form onSubmit={handleCreate} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               
               {/* Basic Fields */}
               <div className="space-y-3">
@@ -154,9 +179,16 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <button type="submit" className="w-full py-3 mt-4 bg-white text-black hover:bg-gray-200 transition rounded-lg font-bold">
-                建立新類別
-              </button>
+              <div className="flex gap-2 mt-4">
+                <button type="submit" className="flex-1 py-3 bg-white text-black hover:bg-gray-200 transition rounded-lg font-bold">
+                  {editId ? '儲存變更' : '建立新類別'}
+                </button>
+                {editId && (
+                  <button type="button" onClick={resetForm} className="py-3 px-4 bg-gray-800 text-gray-300 hover:bg-gray-700 transition rounded-lg font-bold">
+                    取消
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -192,9 +224,14 @@ export default function AdminDashboard() {
                           {cat.supportRoleId && <span className="bg-amber-900/30 text-amber-500 px-2 py-1 rounded">@Ping Role</span>}
                         </div>
                       </div>
-                      <button onClick={() => handleDelete(cat.id)} className="text-gray-500 hover:text-red-400 p-2 opacity-0 group-hover:opacity-100 transition">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
+                      <div className="flex">
+                        <button onClick={() => handleEdit(cat)} className="text-gray-500 hover:text-blue-400 p-2 opacity-0 group-hover:opacity-100 transition" title="編輯">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                        <button onClick={() => handleDelete(cat.id)} className="text-gray-500 hover:text-red-400 p-2 opacity-0 group-hover:opacity-100 transition" title="刪除">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
                     </div>
                     <div className="mt-4 p-3 bg-gray-950 rounded-lg text-sm text-gray-300 whitespace-pre-wrap border border-gray-800/50">
                       {cat.welcomeMessage}

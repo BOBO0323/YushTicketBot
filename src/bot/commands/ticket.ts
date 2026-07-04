@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, EmbedBuilder } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -26,21 +26,24 @@ export const setupTicketCommand = {
         .setDescription('如果您有任何問題，請點擊下方對應的按鈕，我們將為您開啟專屬的客服通道。')
         .setColor(0x5865F2); // Discord Blurple
 
-      // Discord 一排按鈕最多 5 個，這裡為求簡單先全塞在一排（如果超過5個需要分多排）
-      const row = new ActionRowBuilder<ButtonBuilder>();
+      // Option A: 下拉式選單
+      const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('ticket_select')
+        .setPlaceholder('選擇您需要的服務類別...')
+        .setMinValues(1)
+        .setMaxValues(1);
 
       for (const cat of categories) {
-        // 防止超過 5 個導致報錯
-        if (row.components.length >= 5) break; 
-
-        row.addComponents(
-          new ButtonBuilder()
-            .setCustomId(`create_ticket_${cat.code}`)
+        selectMenu.addOptions(
+          new StringSelectMenuOptionBuilder()
             .setLabel(cat.label)
+            .setValue(`create_ticket_${cat.code}`)
             .setEmoji(cat.emoji)
-            .setStyle(ButtonStyle.Primary) // 全部預設使用藍色
+            .setDescription(`開啟 ${cat.label} 客服單`)
         );
       }
+
+      const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
       if (interaction.channel) {
         await (interaction.channel as any).send({
