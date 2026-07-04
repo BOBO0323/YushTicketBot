@@ -123,15 +123,29 @@ model Announcement {
 
 model TicketCategory {
   id             String   @id @default(cuid())
-  code           String   @unique
-  label          String
-  emoji          String
-  channelPrefix  String
-  welcomeMessage String
-  supportRoleId  String?  // VIP: Role ID to ping
-  embedColor     String?  // VIP: Hex color code
-  imageUrl       String?  // VIP: Embed image
-  thumbnailUrl   String?  // VIP: Embed thumbnail
+  code           String   @unique // internal code e.g. 'support'
+  label          String   // Button or select label
+  emoji          String   // Emoji for button/select
+  channelPrefix  String   // prefix for created channel e.g. 'ticket'
+  welcomeMessage String   // Welcome message in the ticket
+
+  // VIP Features
+  supportRoleId  String?  // The discord role ID to ping
+  categoryId     String?  // Unused for now, maybe parent category?
+  embedColor     String?  // Hex color code
+  imageUrl       String?
+  thumbnailUrl   String?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model TicketPanel {
+  id           Int      @id @default(1)
+  title        String   @default("📩 聯繫客服")
+  description  String   @default("如果您有任何問題，請選擇下方對應的服務類別，我們將為您開啟專屬的客服通道。")
+  color        String   @default("#5865F2")
+  imageUrl     String?
+  thumbnailUrl String?
+  updatedAt    DateTime @updatedAt
 }

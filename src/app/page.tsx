@@ -19,6 +19,14 @@ export default function AdminDashboard() {
   const [categories, setCategories] = useState<TicketCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Panel State
+  const [panelTitle, setPanelTitle] = useState('📩 聯繫客服');
+  const [panelDesc, setPanelDesc] = useState('如果您有任何問題，請選擇下方對應的服務類別...');
+  const [panelColor, setPanelColor] = useState('#5865F2');
+  const [panelImage, setPanelImage] = useState('');
+  const [panelThumb, setPanelThumb] = useState('');
+  const [panelSaving, setPanelSaving] = useState(false);
+
   // Form State
   const [editId, setEditId] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -35,7 +43,24 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchCategories();
+    fetchPanel();
   }, []);
+
+  const fetchPanel = async () => {
+    try {
+      const res = await fetch('/api/panel');
+      const data = await res.json();
+      if (data.panel) {
+        setPanelTitle(data.panel.title);
+        setPanelDesc(data.panel.description);
+        setPanelColor(data.panel.color);
+        setPanelImage(data.panel.imageUrl || '');
+        setPanelThumb(data.panel.thumbnailUrl || '');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -46,6 +71,27 @@ export default function AdminDashboard() {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePanelSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPanelSaving(true);
+    try {
+      await fetch('/api/panel', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: panelTitle, description: panelDesc, color: panelColor,
+          imageUrl: panelImage, thumbnailUrl: panelThumb
+        })
+      });
+      alert('✅ 面板設定已儲存！請至 Discord 重新輸入 /setup_ticket 以套用。');
+    } catch (error) {
+      console.error(error);
+      alert('❌ 面板設定儲存失敗');
+    } finally {
+      setPanelSaving(false);
     }
   };
 
@@ -120,6 +166,47 @@ export default function AdminDashboard() {
               發送面板至 Discord
             </button>
           </div>
+        </div>
+
+        {/* Panel Settings Area */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl mb-8">
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+            <span className="text-indigo-400">⚙️</span> 機器人主面板外觀設定
+          </h2>
+          <form onSubmit={handlePanelSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">主標題</label>
+                <input required value={panelTitle} onChange={e => setPanelTitle(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">面板描述 (支援 Discord Markdown)</label>
+                <textarea required rows={4} value={panelDesc} onChange={e => setPanelDesc(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition resize-none" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">面板側邊顏色 (Hex)</label>
+                <div className="flex gap-3">
+                  <input type="color" value={panelColor} onChange={e => setPanelColor(e.target.value)} className="h-10 w-14 rounded cursor-pointer bg-gray-950 border border-gray-800" />
+                  <input required value={panelColor} onChange={e => setPanelColor(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">大型附圖網址 (Image URL)</label>
+                <input value={panelImage} onChange={e => setPanelImage(e.target.value)} placeholder="https://..." className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">右上角縮圖網址 (Thumbnail URL)</label>
+                <input value={panelThumb} onChange={e => setPanelThumb(e.target.value)} placeholder="https://..." className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition" />
+              </div>
+            </div>
+            <div className="md:col-span-2 mt-2">
+              <button type="submit" disabled={panelSaving} className="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition rounded-lg font-bold text-white shadow-lg shadow-indigo-600/20">
+                {panelSaving ? '儲存中...' : '儲存面板設定'}
+              </button>
+            </div>
+          </form>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
