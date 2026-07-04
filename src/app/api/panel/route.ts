@@ -19,7 +19,15 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    const { title, description, color, imageUrl, thumbnailUrl, logChannelId, autoCloseHours } = data;
+    let { title, description, color, imageUrl, thumbnailUrl, logChannelId, autoCloseHours } = data;
+
+    // 如果使用者貼上的是完整網址 (例如 https://discord.com/channels/123/456)，則萃取最後面的 ID
+    if (logChannelId && logChannelId.includes('/')) {
+      const parts = logChannelId.split('/');
+      logChannelId = parts[parts.length - 1].trim();
+    } else if (logChannelId) {
+      logChannelId = logChannelId.trim();
+    }
 
     const updatedPanel = await prisma.ticketPanel.upsert({
       where: { id: 1 },

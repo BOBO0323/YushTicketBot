@@ -190,8 +190,8 @@ export default function AdminDashboard() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">紀錄頻道 ID</label>
-                  <input value={panelLogChannel} onChange={e => setPanelLogChannel(e.target.value)} placeholder="留空則不備份" className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition" />
+                  <label className="block text-sm font-medium text-gray-400 mb-1">紀錄頻道連結 (或 ID)</label>
+                  <input value={panelLogChannel} onChange={e => setPanelLogChannel(e.target.value)} placeholder="留空不備份，也可貼上頻道網址" className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none transition" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">超時關單 (小時)</label>
