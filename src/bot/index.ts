@@ -32,7 +32,20 @@ async function packAndCloseTicket(channel: TextChannel, closedBy: string, reason
             { name: '原因', value: reason, inline: true }
           )
           .setTimestamp();
-        await (logChannel as TextChannel).send({ embeds: [embed], files: [attachment] });
+        
+        // 發送訊息並取得附檔網址
+        const msg = await (logChannel as TextChannel).send({ embeds: [embed], files: [attachment] });
+        const fileUrl = msg.attachments.first()?.url;
+        
+        if (fileUrl) {
+          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setLabel('📥 下載對話紀錄 (請用電腦瀏覽器開啟)')
+              .setStyle(ButtonStyle.Link)
+              .setURL(fileUrl)
+          );
+          await msg.edit({ components: [row] });
+        }
       }
     }
   } catch (error) { console.error('Pack error:', error); }
