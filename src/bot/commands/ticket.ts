@@ -39,7 +39,7 @@ export const setupTicketCommand = {
         .setMaxValues(1);
 
       for (const cat of categories) {
-        let emojiToSet = cat.emoji.trim();
+        let emojiToSet = cat.emoji.trim().replace(/^\\/, ''); // 自動移除開頭可能的反斜線
         // 如果是自定義表情符號格式 <:name:id>，discord.js 允許直接傳入，但有時候我們需要確保安全。
         // v14 的 setEmoji 支援字串 (例如 '<:yush:123456789>') 或是單純的 ID ('123456789')
         
